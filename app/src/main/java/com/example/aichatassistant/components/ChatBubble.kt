@@ -13,10 +13,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -40,36 +44,40 @@ import androidx.compose.ui.unit.sp
 import com.example.aichatassistant.R
 import com.example.aichatassistant.ui.theme.AiChatAssistantTheme
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntSize
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 
 @Composable
 fun Response(from: Int, message: String){
-
-    var isBoxVisible by remember {mutableStateOf(false)}
-    var userImage by remember { mutableIntStateOf(R.drawable.elon)}
-    var imgAlignment by remember { mutableStateOf(Alignment.CenterVertically) }
-    var rowAlignment by remember { mutableStateOf(Alignment.CenterStart) }
-    var layoutDirection by remember { mutableStateOf(LayoutDirection.Ltr) }
-    val aiColor = MaterialTheme.colorScheme.surfaceVariant
-    val userColor = MaterialTheme.colorScheme.primary
+    var messageSent by remember { mutableStateOf(false) }
+    var isBoxVisible by remember {mutableStateOf(false)} // hide time of chat
+    var cardWidth by remember { mutableStateOf(0) }
+    var hideImage by remember { mutableStateOf(false) } // hide image if user chats
+    var imgAlignment by remember { mutableStateOf(Alignment.CenterVertically) } // alignment of image on chat bubble
+    var rowAlignment by remember { mutableStateOf(Alignment.CenterStart) }// alignment of bubble
+    var layoutDirection by remember { mutableStateOf(LayoutDirection.Ltr) } // layout direction of bubble
+    val aiColor = MaterialTheme.colorScheme.onTertiary //chat bubble color for ai
+    val userColor = MaterialTheme.colorScheme.primary // chat bubble color for user
     var containerColor by remember { mutableStateOf(aiColor) }
     val formattedTime = getCurrentTime()
 
+
     if(from == 0){
-        userImage = (R.drawable.elon)
         layoutDirection = LayoutDirection.Ltr
         containerColor = aiColor
         rowAlignment = Alignment.CenterStart
+        hideImage = false
     }else{
-        userImage = (R.drawable.profpic)
         layoutDirection = LayoutDirection.Rtl
         containerColor = userColor
         rowAlignment = Alignment.CenterEnd
+        hideImage = true
     }
 
     Box (
@@ -88,14 +96,27 @@ fun Response(from: Int, message: String){
                 if(message.length > 200){
                     imgAlignment = Alignment.Top
                 }
-                Image(painter = painterResource(id = userImage), contentDescription = "aiProfile",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .align(imgAlignment)
-                )
-                Spacer(modifier = Modifier.width(10.dp))
+                if(!hideImage){
+                    Image(painter = painterResource(R.drawable.elon), contentDescription = "aiProfile",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .align(imgAlignment)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                }else{
+                    if(!messageSent){
+                        Icon(
+                            Icons.Filled.Send, contentDescription = "Send",
+                            modifier = Modifier
+                                .rotate(-45f)
+                                .size(16.dp)
+                                .align(Alignment.CenterVertically)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                    }
+                }
                 Column(
                     modifier = Modifier
                         .clickable(
@@ -105,41 +126,47 @@ fun Response(from: Int, message: String){
                             isBoxVisible = !isBoxVisible
                         }
                 ){
-                    AnimatedVisibility(visible = isBoxVisible) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(5.dp),
-                            contentAlignment = Alignment.CenterStart
-                        ){
-
-                            Text(
-                                text = formattedTime,
-                                fontSize = 10.sp,
-                                textAlign = TextAlign.Justify,
-                                style = TextStyle(textDirection = TextDirection.Content)
-                            )
-                        }
-                    }
                     Card (elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
                         shape = RoundedCornerShape(
                             topStart = 4.dp,
-                            topEnd = 20.dp,
-                            bottomStart = 20.dp,
-                            bottomEnd = 20.dp
+                            topEnd = 15.dp,
+                            bottomStart = 15.dp,
+                            bottomEnd = 15.dp
                         ),
                         colors = CardDefaults.cardColors(
                             containerColor = containerColor,
-                        )
+                        ),
+                        modifier = Modifier
+                            .widthIn(min = 0.dp, max = 250.dp)
+                            .onSizeChanged { size: IntSize ->
+                                cardWidth = size.width
+                            }
+
                     ) {
                         Text(
                             text = message,
                             fontSize = 16.sp,
-                            modifier = Modifier
-                                .padding(10.dp),
+                            softWrap = true,
                             textAlign = TextAlign.Justify,
-                            style = TextStyle(textDirection = TextDirection.Content)
+                            style = TextStyle(textDirection = TextDirection.Content),
+                            modifier = Modifier.padding(10.dp)
                         )
+                        AnimatedVisibility(visible = isBoxVisible) {
+                            Box(
+                                modifier = Modifier
+                                    .width(with(LocalDensity.current){cardWidth.toDp()}),
+                                    contentAlignment = Alignment.CenterEnd
+                            ){
+
+                                Text(
+                                    modifier = Modifier
+                                        .padding(end = 10.dp, bottom = 5.dp),
+                                    text = formattedTime,
+                                    fontSize = 10.sp,
+                                    style = TextStyle(textDirection = TextDirection.Content)
+                                )
+                            }
+                        }
                     }
                 }
             }

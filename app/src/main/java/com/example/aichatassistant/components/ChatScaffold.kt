@@ -28,29 +28,29 @@ import com.example.aichatassistant.ui.theme.AiChatAssistantTheme
 @Composable
 fun AiChatAssistant(){
     val message = remember { MessageModel() }
-    message.addMessage(Message("What i can help you today?", 0))
+    message.addMessage(Message("What can I help you today?", 0))
     AiChatAssistantTheme {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background
-        ){
-            Scaffold (
-                topBar = {
-                    topBar()
-                },
-                bottomBar = {
-                   ChatBox(message)
-                },
-                modifier = Modifier.fillMaxSize()
-            ){padding ->
+        Scaffold (
+            topBar = {
+                topBar()
+            },
+            bottomBar = {
+                ChatBox(message)
+            },
+            modifier = Modifier.fillMaxSize()
+        ){padding ->
+            Surface (
+                modifier = Modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.surfaceVariant
+            ){
                 LazyColumn(
                     modifier = Modifier
                         .padding(padding)
                         .fillMaxWidth()
                 ){
-                  items(message.getMessageList) { message ->
-                      Response(message.from,message.message)
-                  }
+                    items(message.getMessageList) { message ->
+                        Response(message.from,message.message)
+                    }
                 }
             }
         }
@@ -78,11 +78,4 @@ fun topBar(){
         }
     }
 
-}
-
-
-@Preview
-@Composable
-fun ShowTheApp(){
-    topBar()
 }
