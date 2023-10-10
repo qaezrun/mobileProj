@@ -1,30 +1,38 @@
 package com.example.aichatassistant.components
 
-import android.util.Log
 import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.keyframes
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Send
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -32,26 +40,25 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.aichatassistant.api.AiApi
-import com.example.aichatassistant.api.MyInterceptor
-import com.example.aichatassistant.api.Message
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
+import androidx.compose.ui.unit.sp
+import com.example.aichatassistant.api.postAiMessage
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.launch
-import okhttp3.OkHttpClient
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatBox(messageModel: MessageModel){
+    var isAiThinking by remember {mutableStateOf(false)}
+    var showSend by remember {mutableStateOf(true)}
+    val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
-    var textMessage by rememberSaveable(stateSaver = TextFieldValue.Saver) {
-        mutableStateOf(TextFieldValue("", TextRange(0, 7)))
+    var textMessage by rememberSaveable { mutableStateOf("") }
+    val handler = CoroutineExceptionHandler { _, exception ->
+        println("Caught $exception")
     }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -60,69 +67,132 @@ fun ChatBox(messageModel: MessageModel){
         Row(
             modifier = Modifier
                 .align(Alignment.Center)
-                .padding(top = 10.dp, bottom = 10.dp),
+                .padding(start = 15.dp, top = 3.dp, bottom = 3.dp, end = 5.dp)
         ){
-            TextField(
+            BasicTextField(
                 value = textMessage,
                 onValueChange = { textMessage = it },
-                placeholder = {Text(text = "Type your message here")},
-                shape = RoundedCornerShape(20.dp),
-                colors = TextFieldDefaults.textFieldColors(
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent
+                textStyle = TextStyle(
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color.DarkGray
                 ),
+                decorationBox = { innerTextField ->
+                    Box(
+                        modifier = Modifier
+                            .border(
+                                width = 1.dp,
+                                color = Color(0xFFAAE9E6),
+                                shape = RoundedCornerShape(size = 16.dp)
+                            )
+                            .padding(horizontal = 12.dp, vertical = 9.dp)
+                    ) {
+                        if (textMessage.isEmpty()) {
+                            Text(
+                                text = "Message...",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Normal,
+                                color = Color.LightGray
+                            )
+                        }
+                        innerTextField()
+                    }
+                },
                 modifier = Modifier
-                    .width(250.dp)
-                    .height(50.dp),
-                maxLines = 5,
-
+                    .weight(1f)
+                    .align(Alignment.CenterVertically)
             )
             IconButton(
                 onClick = {
-                    if(textMessage.text == ""){
+                    if(textMessage == ""){
                         Toast.makeText(context, "Add message first!", Toast.LENGTH_SHORT).show()
                     }else{
-                        messageModel.addMessage(Message(textMessage.text.trim(),1))
-                        println(textMessage.text.trim())
-                        postAiMessage(textMessage.text.trim())
-                        textMessage = TextFieldValue("", TextRange(0, 0))
+                        val messageUsage = textMessage.trim()
+                        messageModel.addMessage(Message(messageUsage,1,true))
+                        textMessage = ""
+                        showSend = false
+                        isAiThinking = true
+                        coroutineScope.launch(handler) {
+                            //testPublicApiPost()
+                            messageModel.toggleSentStat(messageModel.getMessageList.size-1)
+                            val result = postAiMessage(messageUsage)
+                            messageModel.addMessage(Message(result,0,true))
+                            isAiThinking = false
+                            showSend = true
+                        }
                     }
                 },
-               interactionSource = remember { MutableInteractionSource() },
+                interactionSource = remember { MutableInteractionSource() },
+                modifier = Modifier
+                    .align(Alignment.CenterVertically),
+                enabled = showSend
             ) {
-                Icon(Icons.Filled.Send, contentDescription = "Send",
-                    modifier = Modifier
-                        .rotate(-45f)
-                        .size(23.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
+                AnimatedVisibility(visible = showSend) {
+                    Icon(Icons.Filled.Send, contentDescription = "Send",
+                        modifier = Modifier
+                            .rotate(-45f)
+                            .size(23.dp),
+                        tint = Color(0xFFAAE9E6)
+                    )
+                }
+                AnimatedVisibility(visible = isAiThinking) {
+                    DotsTyping()
+                }
             }
         }
     }
 }
 
-fun postAiMessage(message: String){
-    val client = OkHttpClient.Builder().apply{
-        addInterceptor(MyInterceptor())
-    }.build()
-
-    val retrofit = Retrofit.Builder()
-        .baseUrl("https://ai-assistant.alleasy.dev/")
-        .client(client)
-        .addConverterFactory(GsonConverterFactory.create())
-        .build()
-        .create(AiApi::class.java)
-
-    GlobalScope.launch(Dispatchers.IO){
-        try {
-            val response = retrofit.sendMessage(Message(message))
-            if (response.isSuccessful && response.body() != null) {
-                 println(response.body()!!.aiMessage)
-            } else {
-                println("Error Code: ${response.code()}")
+val dotSize = 7.dp // made it bigger for demo
+val delayUnit = 300 // you can change delay to change animation speed
+@Composable
+fun DotsTyping() {
+    val maxOffset = 10f
+    @Composable
+    fun Dot(
+        offset: Float
+    ) = Spacer(
+        Modifier
+            .size(dotSize)
+            .offset(y = -offset.dp)
+            .background(
+                color = MaterialTheme.colorScheme.primary,
+                shape = CircleShape
+            )
+    )
+    val infiniteTransition = rememberInfiniteTransition()
+    @Composable
+    fun animateOffsetWithDelay(delay: Int) = infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 0f,
+        animationSpec = infiniteRepeatable(
+            animation = keyframes {
+                durationMillis = delayUnit * 4
+                0f at delay with LinearEasing
+                maxOffset at delay + delayUnit with LinearEasing
+                0f at delay + delayUnit * 2
             }
-        } catch (e: Exception) {
-             println("An error occurred: ${e.message}")
-        }
+        )
+    )
+    val offset1 by animateOffsetWithDelay(0)
+    val offset2 by animateOffsetWithDelay(delayUnit)
+    val offset3 by animateOffsetWithDelay(delayUnit * 2)
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+        modifier = Modifier.padding(top = maxOffset.dp)
+    ) {
+        val spaceSize = 2.dp
+        Dot(offset1)
+        Spacer(Modifier.width(spaceSize))
+        Dot(offset2)
+        Spacer(Modifier.width(spaceSize))
+        Dot(offset3)
     }
+}
+
+@Preview
+@Composable
+fun ShowUserInput(){
+    ChatBox(messageModel = MessageModel())
 }

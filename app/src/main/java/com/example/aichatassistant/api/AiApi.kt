@@ -2,6 +2,7 @@ package com.example.aichatassistant.api
 
 import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.POST
 
 interface AiApi {
@@ -10,4 +11,7 @@ interface AiApi {
 
     @POST("api/users")
     suspend fun testApi(@Body test: TestPost): Response<TestResponse>
+
+    @DELETE("ai-assistant/chat-gpt/clear-chat")
+    suspend fun deleteHistory(): Response<ClearHist>
 }

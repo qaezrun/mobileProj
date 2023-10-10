@@ -18,6 +18,32 @@ suspend fun postAiMessage(message: String): String {
     return aiRes
 }
 
+suspend fun deleteHistory():ClearHist{
+    val retrofit = RetrofitAiApi.getRetrofit()
+    val api = retrofit.create(AiApi::class.java)
+
+    val res: ClearHist = try{
+        val response = api.deleteHistory()
+        if(response.isSuccessful && response.body() != null) {
+            ClearHist(
+                status = response.body()!!.status,
+                message = response.body()!!.message
+            )
+        } else {
+            ClearHist(
+                status = response.code(),
+                message = "Failed to delete: ${response.message()}"
+            )
+        }
+    }catch(e:Exception){
+        ClearHist(
+            status = 10000,
+            message = "Exception Err"
+        )
+    }
+    return res
+}
+
 suspend fun testPublicApiPost(){
     val retrofit = RetrofitTest.getRetrofit()
     val api = retrofit.create(AiApi::class.java)
