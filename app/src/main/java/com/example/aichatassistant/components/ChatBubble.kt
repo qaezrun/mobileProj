@@ -1,11 +1,6 @@
 package com.example.aichatassistant.components
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearOutSlowInEasing
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.slideIn
-import androidx.compose.animation.slideOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -51,7 +46,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import java.text.SimpleDateFormat
 import java.util.Calendar

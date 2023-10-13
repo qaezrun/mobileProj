@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "330021618505",
+    "project_id": "ai-assistant-using-chatgpt-api",
+    "storage_bucket": "ai-assistant-using-chatgpt-api.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:330021618505:android:f5ab76c5536efeac711098",
+        "android_client_info": {
+          "package_name": "com.example.aichatassistant"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "330021618505-doqoa3h0sfahtlm5trrgtn2shsvd2mf4.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.aichatassistant",
+            "certificate_hash": "90d172a278ad0afbf36549e1a9ad682b25f15624"
+          }
+        },
+        {
+          "client_id": "330021618505-94jqjcmiuc4brfetq76unkp3mmclr245.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC4MPUXJ9c4RTA_okUme4IsgDbXyZQiDr0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "330021618505-94jqjcmiuc4brfetq76unkp3mmclr245.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

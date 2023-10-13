@@ -1,3 +1,4 @@
 <resources>
-    <string name="app_name">AiChatAssistant</string>
+    <string name="app_name">ChatBot</string>
+    <string name="web_client_id">330021618505-94jqjcmiuc4brfetq76unkp3mmclr245.apps.googleusercontent.com</string>
 </resources>
