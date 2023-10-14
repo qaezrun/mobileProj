@@ -1,8 +1,9 @@
 package com.example.aichatassistant.components
 import android.content.Intent
-import android.widget.Toast
 import androidx.activity.compose.ManagedActivityResultLauncher
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,6 +35,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -46,21 +48,27 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.example.aichatassistant.FirebaseUtils
 import com.example.aichatassistant.R
-import com.example.aichatassistant.ui.theme.AiChatAssistantTheme
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import com.google.firebase.auth.FirebaseAuthException
+import com.google.android.gms.common.api.ApiException
+import com.google.firebase.auth.AuthResult
+import com.google.firebase.auth.GoogleAuthProvider
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.ktx.Firebase
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginForm(
     launcher: ManagedActivityResultLauncher<Intent, ActivityResult>,
-    fireViewModel: FirebaseModel
+    fireViewModel: FirebaseModel,
+    modal: ModalModel,
+    loading: LoadingSpinner
 ) {
     /*
         launcher is used for google sign in. Line 223
@@ -75,166 +83,186 @@ fun LoginForm(
     var password by rememberSaveable { mutableStateOf("") }
     var showPassword by remember { mutableStateOf(false) }
     var showSignUp by remember { mutableStateOf(false) }
-    fun notEmpty(): Boolean = email.trim().isNotEmpty() && password.trim().isNotEmpty()
 
-    AiChatAssistantTheme {
-        if(showSignUp){
-            SignUpFormPopUp { showSignUp = false }
-        }
-        Box(
+    fun notEmpty(): Boolean = email.trim().isNotEmpty() && password.trim().isNotEmpty()
+    if(showSignUp){
+        SignUpFormPopUp(
+            onDismissRequest = {
+                showSignUp = false
+            },
+            onConfirmation = {
+                val a = listOfModal[3]
+                modal.setModalValues(a.header,a.message,a.btnOneName,a.btnTwoName,a.twoBtn,a.whatModalCanDo)
+                modal.toggleModal()
+            },
+            modal,
+            loading
+        )
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+    ){
+        Column(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
+                .align(Alignment.Center)
         ){
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .align(Alignment.Center)
+                    .padding(bottom = 15.dp)
             ){
-                Box(
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 15.dp)
+                        .align(Alignment.Center)
                 ){
-                    Column(
+                    Text(
+                        text = "Welcome Human!",
+                        style = MaterialTheme.typography.bodyLarge,
                         modifier = Modifier
-                            .align(Alignment.Center)
-                    ){
-                        Text(
-                            text = "Welcome Human!",
-                            style = MaterialTheme.typography.bodyLarge,
-                            modifier = Modifier
-                                .align(Alignment.CenterHorizontally)
-                        )
-                        Text(
-                            text = "I've been waiting for you",
-                            style = MaterialTheme.typography.labelSmall,
-                            modifier = Modifier
-                                .align(Alignment.CenterHorizontally)
-                        )
-                    }
+                            .align(Alignment.CenterHorizontally)
+                    )
+                    Text(
+                        text = "I've been waiting for you",
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier
+                            .align(Alignment.CenterHorizontally)
+                    )
                 }
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 16.dp, end = 16.dp)
-                ){
-                    Column{
-                        OutlinedTextField(
-                            value = email,
-                            onValueChange = {email = it},
-                            label = {Text(text="Email", style = MaterialTheme.typography.labelSmall)},
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(start = 16.dp, end = 16.dp)
-                                .height(60.dp)
-                        )
-                        OutlinedTextField(
-                            value = password,
-                            onValueChange = { password = it },
-                            label = {Text(text = "Password", style = MaterialTheme.typography.labelSmall)},
-                            visualTransformation =  if (showPassword) {
-                                VisualTransformation.None
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp)
+            ){
+                Column{
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = {email = it},
+                        label = {Text(text="Email", style = MaterialTheme.typography.labelSmall)},
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 16.dp, end = 16.dp)
+                            .height(60.dp),
+                        textStyle = MaterialTheme.typography.labelSmall
+                    )
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = { password = it },
+                        label = {Text(text = "Password", style = MaterialTheme.typography.labelSmall)},
+                        singleLine = true,
+                        textStyle = MaterialTheme.typography.labelSmall,
+                        visualTransformation =  if (showPassword) {
+                            VisualTransformation.None
+                        } else {
+                            PasswordVisualTransformation()
+                        },
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Password
+                        ),
+                        trailingIcon = {
+                            if (showPassword) {
+                                IconButton(onClick = { showPassword = false }) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Visibility,
+                                        contentDescription = "hide_password"
+                                    )
+                                }
                             } else {
-                                PasswordVisualTransformation()
-                            },
-                            keyboardOptions = KeyboardOptions(
-                                keyboardType = KeyboardType.Password
-                            ),
-                            trailingIcon = {
-                                if (showPassword) {
-                                    IconButton(onClick = { showPassword = false }) {
-                                        Icon(
-                                            imageVector = Icons.Filled.Visibility,
-                                            contentDescription = "hide_password"
-                                        )
-                                    }
-                                } else {
-                                    IconButton(
-                                        onClick = { showPassword = true }) {
-                                        Icon(
-                                            imageVector = Icons.Filled.VisibilityOff,
-                                            contentDescription = "hide_password"
-                                        )
-                                    }
+                                IconButton(
+                                    onClick = { showPassword = true }) {
+                                    Icon(
+                                        imageVector = Icons.Filled.VisibilityOff,
+                                        contentDescription = "hide_password"
+                                    )
                                 }
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(start = 16.dp, end = 16.dp)
-                                .height(60.dp)
-                        )
-                        Button(
-                            onClick = {
-                                if(notEmpty()){
-                                    FirebaseUtils.firebaseAuth.signInWithEmailAndPassword(email.trim(), password.trim())
-                                        .addOnCompleteListener{task->
-                                            if(task.isSuccessful){
-                                                fireViewModel.updateFirebaseUser(task.result)
-                                            }else{
-                                                val err = task.exception?.message
-                                                Toast.makeText(context,err.toString(),Toast.LENGTH_SHORT).show()
-                                            }
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 16.dp, end = 16.dp)
+                            .height(60.dp)
+                    )
+                    Button(
+                        onClick = {
+                            if(notEmpty()){
+                                loading.toggleLoading()
+                                FirebaseUtils.firebaseAuth.signInWithEmailAndPassword(email.trim(), password.trim())
+                                    .addOnCompleteListener{task->
+                                        loading.toggleLoading()
+                                        if(task.isSuccessful){
+                                            fireViewModel.updateFirebaseUser(task.result)
+                                        }else{
+                                            val err = task.exception?.message
+                                            val a = listOfModal[0] // located at model
+                                            modal.setModalValues(a.header,err.toString(),a.btnOneName,a.btnTwoName,a.twoBtn,a.whatModalCanDo)
+                                            modal.toggleModal()
                                         }
-                                }else{
-                                    Toast.makeText(context,"Fill up login form!",Toast.LENGTH_SHORT).show()
-                                }
-                            },
-                            modifier = Modifier
-                                .align(Alignment.CenterHorizontally)
-                                .padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 10.dp)
-                                .fillMaxWidth(),
-                            shape = RoundedCornerShape(6.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color.Black, contentColor = Color.White)
-                        ) {
-                            Text(text = "Login", style = MaterialTheme.typography.labelSmall,modifier = Modifier.padding(6.dp))
-                        }
+                                    }
+                            }else{
+                                val a = listOfModal[1]
+                                modal.setModalValues(a.header,a.message,a.btnOneName,a.btnTwoName,a.twoBtn,a.whatModalCanDo)
+                                modal.toggleModal()
+                            }
+                        },
+                        modifier = Modifier
+                            .align(Alignment.CenterHorizontally)
+                            .padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 10.dp)
+                            .fillMaxWidth(),
+                        shape = RoundedCornerShape(6.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Black, contentColor = Color.White)
+                    ) {
+                        Text(text = "Login", style = MaterialTheme.typography.labelSmall,modifier = Modifier.padding(6.dp))
                     }
                 }
-                Box(
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 15.dp)
+            ){
+                Column (
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 15.dp)
+                        .align(Alignment.Center)
                 ){
-                    Column (
+                    Row(
                         modifier = Modifier
-                            .align(Alignment.Center)
+                            .padding(5.dp)
                     ){
-                        Row(
+                        Text(
+                            text = "Don't have an account yet? ",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Text(
+                            text = "SIGN UP",
+                            color = Color.Blue,
+                            style = MaterialTheme.typography.bodySmall,
+                            textDecoration = TextDecoration.Underline,
                             modifier = Modifier
-                                .padding(5.dp)
-                        ){
-                            Text(
-                                text = "Don't have an account yet? ",
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                            Text(
-                                text = "SIGN UP",
-                                color = Color.Blue,
-                                style = MaterialTheme.typography.bodySmall,
-                                textDecoration = TextDecoration.Underline,
-                                modifier = Modifier
-                                    .clickable { showSignUp = true }
-                            )
-                            Text(
-                                text = " or sign up using:" ,
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
-                        IconButton(
-                            onClick = {
-                                val gso =
-                                    GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                                        .requestIdToken(token)
-                                        .requestEmail()
-                                        .build()
-                                val googleSignInClient = GoogleSignIn.getClient(context, gso)
-                                launcher.launch(googleSignInClient.signInIntent)
-                            },
-                            modifier = Modifier
-                                .align(Alignment.CenterHorizontally)
-                        ) {
-                            Icon(painter = painterResource(R.drawable.ic_google_logo), contentDescription = "")
-                        }
+                                .clickable { showSignUp = true }
+                        )
+                        Text(
+                            text = " or sign up using:" ,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    IconButton(
+                        onClick = {
+                            val gso =
+                                GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                                    .requestIdToken(token)
+                                    .requestEmail()
+                                    .build()
+                            val googleSignInClient = GoogleSignIn.getClient(context, gso)
+                            launcher.launch(googleSignInClient.signInIntent)
+                        },
+                        modifier = Modifier
+                            .align(Alignment.CenterHorizontally)
+                    ) {
+                        Icon(painter = painterResource(R.drawable.ic_google_logo), contentDescription = "")
                     }
                 }
             }
@@ -242,10 +270,35 @@ fun LoginForm(
     }
 }
 
+
+@Composable
+fun rememberFirebaseAuthLauncher(
+    onAuthComplete: (AuthResult) -> Unit,
+    onAuthError: (ApiException) -> Unit
+): ManagedActivityResultLauncher<Intent, ActivityResult> {
+    val scope = rememberCoroutineScope()
+    return rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+        try {
+            val account = task.getResult(ApiException::class.java)!!
+            val credential = GoogleAuthProvider.getCredential(account.idToken!!, null)
+            scope.launch {
+                val authResult = Firebase.auth.signInWithCredential(credential).await()
+                onAuthComplete(authResult)
+            }
+        } catch (e: ApiException) {
+            onAuthError(e)
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SignUpFormPopUp(
-    onDismissRequest: () -> Unit
+    onDismissRequest: () -> Unit,
+    onConfirmation: () -> Unit,
+    modal: ModalModel,
+    loading: LoadingSpinner
 ){
     val context = LocalContext.current
     var email by rememberSaveable { mutableStateOf("") }
@@ -310,12 +363,16 @@ fun SignUpFormPopUp(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(start = 16.dp, end = 16.dp)
-                        .height(60.dp)
+                        .height(60.dp),
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.labelSmall,
                 )
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
                     label = {Text(text = "Password", style = MaterialTheme.typography.labelSmall)},
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.labelSmall,
                     visualTransformation =  if (showPassword) {
                         VisualTransformation.None
                     } else {
@@ -351,6 +408,8 @@ fun SignUpFormPopUp(
                     value = password2,
                     onValueChange = { password2 = it },
                     label = {Text(text = "Confirm Password", style = MaterialTheme.typography.labelSmall)},
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.labelSmall,
                     visualTransformation =  if (showPassword2) {
                         VisualTransformation.None
                     } else {
@@ -386,18 +445,23 @@ fun SignUpFormPopUp(
                 Button(
                     onClick = {
                          if(identicalPassword()){
+                             loading.toggleLoading()
                              FirebaseUtils.firebaseAuth.createUserWithEmailAndPassword(email.trim(),password2.trim())
                                  .addOnCompleteListener{ task ->
+                                     loading.toggleLoading()
                                      if(task.isSuccessful){
-                                         Toast.makeText(context,"user created",Toast.LENGTH_SHORT).show()
-                                         onDismissRequest()
+                                         onConfirmation()
                                      }else{
                                          val err = task.exception?.message
-                                         Toast.makeText(context,err.toString(),Toast.LENGTH_SHORT).show()
+                                         val a = listOfModal[2] // located at model
+                                         modal.setModalValues(a.header,err.toString(),a.btnOneName,a.btnTwoName,a.twoBtn,a.whatModalCanDo)
+                                         modal.toggleModal()
                                      }
                                  }
                          }else{
-                             Toast.makeText(context,error,Toast.LENGTH_SHORT).show()
+                             val a = listOfModal[2] // located at model
+                             modal.setModalValues(a.header,error,a.btnOneName,a.btnTwoName,a.twoBtn,a.whatModalCanDo)
+                             modal.toggleModal()
                          }
                     },
                     modifier = Modifier

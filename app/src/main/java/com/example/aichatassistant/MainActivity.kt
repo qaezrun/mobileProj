@@ -1,33 +1,29 @@
 package com.example.aichatassistant
 
-import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.ManagedActivityResultLauncher
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
-import androidx.activity.result.ActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import com.example.aichatassistant.components.AiChatAssistant
 import com.example.aichatassistant.components.FirebaseModel
+import com.example.aichatassistant.components.LoadingPop
+import com.example.aichatassistant.components.LoadingSpinner
 import com.example.aichatassistant.components.LoginForm
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.common.api.ApiException
-import com.google.firebase.auth.AuthResult
-import com.google.firebase.auth.GoogleAuthProvider
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.ktx.Firebase
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
+import com.example.aichatassistant.components.MessageModel
+import com.example.aichatassistant.components.ModalModel
+import com.example.aichatassistant.components.MyModal
+import com.example.aichatassistant.components.rememberFirebaseAuthLauncher
+import com.example.aichatassistant.components.whatModalCanDo
+import com.example.aichatassistant.ui.theme.AiChatAssistantTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             val fireViewModel = remember { FirebaseModel() }//Go to components/model.kt if you want clarification
+            val modal = remember{ ModalModel()}
+            val loading = remember{LoadingSpinner()}
+            val message = remember { MessageModel() }
             val launcher = rememberFirebaseAuthLauncher(
                 onAuthComplete = { result ->
                     fireViewModel.updateFirebaseUser(result)
@@ -36,31 +32,31 @@ class MainActivity : ComponentActivity() {
                     fireViewModel.updateFirebaseUser(null)
                 }
             )
-            /*This condition checks if user is currently login or not*/
-            if(fireViewModel.getUser() != null){ //Go to components/model and find FirebaseModel
-                AiChatAssistant(fireViewModel)
-            }else{
-                LoginForm(launcher = launcher,fireViewModel)
-            }
-        }
-    }
-    @Composable
-    fun rememberFirebaseAuthLauncher(
-        onAuthComplete: (AuthResult) -> Unit,
-        onAuthError: (ApiException) -> Unit
-    ): ManagedActivityResultLauncher<Intent, ActivityResult> {
-        val scope = rememberCoroutineScope()
-        return rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
-            try {
-                val account = task.getResult(ApiException::class.java)!!
-                val credential = GoogleAuthProvider.getCredential(account.idToken!!, null)
-                scope.launch {
-                    val authResult = Firebase.auth.signInWithCredential(credential).await()
-                    onAuthComplete(authResult)
+            AiChatAssistantTheme {
+                /*This condition checks if user is currently login or not*/
+                if(fireViewModel.getUser() != null){ //Go to components/model and find FirebaseModel
+                    AiChatAssistant(fireViewModel,modal,message,loading)
+                }else{
+                    LoginForm(launcher = launcher,fireViewModel,modal,loading)
                 }
-            } catch (e: ApiException) {
-                onAuthError(e)
+
+                /*Global Modal */
+                if (modal.getShow) {
+                    MyModal(
+                        onDismissRequest = { modal.toggleModal() },
+                        onConfirmation = { whatModalCanDo(message, modal.getTodo, modal) },
+                        header = modal.getHeader,
+                        message = modal.getMessage,
+                        btnOne = modal.getBtnOneName,
+                        btnTwo = modal.getBtnTwoName,
+                        twoBtn = modal.getTwoBtn
+                    )
+                }
+
+                /*Global Loading Spinner*/
+                if(loading.getLoadingState){
+                    LoadingPop()
+                }
             }
         }
     }
