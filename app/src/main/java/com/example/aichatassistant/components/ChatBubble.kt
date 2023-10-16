@@ -44,6 +44,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
@@ -59,20 +60,25 @@ fun Response(from: Int, message: String, sentStat: Boolean){
     var imgAlignment by remember { mutableStateOf(Alignment.CenterVertically) } // alignment of image on chat bubble
     var rowAlignment by remember { mutableStateOf(Alignment.CenterStart) }// alignment of bubble
     var layoutDirection by remember { mutableStateOf(LayoutDirection.Ltr) } // layout direction of bubble
-    val aiColor = MaterialTheme.colorScheme.onTertiary //chat bubble color for ai
-    val userColor = MaterialTheme.colorScheme.primary // chat bubble color for user
+    val aiColor = MaterialTheme.colorScheme.primary //chat bubble color for ai
+    val userColor = MaterialTheme.colorScheme.tertiary // chat bubble color for user
+    val aiFontColor = Color.Black
+    val userFontColor = MaterialTheme.colorScheme.primary
     var containerColor by remember { mutableStateOf(aiColor) }
+    var fontColor by remember { mutableStateOf(aiFontColor) }
     val formattedTime = getCurrentTime()
 
 
     if(from == 0){
         layoutDirection = LayoutDirection.Ltr
         containerColor = aiColor
+        fontColor = aiFontColor
         rowAlignment = Alignment.CenterStart
         hideImage = false
     }else{
         layoutDirection = LayoutDirection.Rtl
         containerColor = userColor
+        fontColor = userFontColor
         rowAlignment = Alignment.CenterEnd
         hideImage = true
     }
@@ -116,7 +122,7 @@ fun Response(from: Int, message: String, sentStat: Boolean){
                                 modifier = Modifier
                                     .rotate(-45f)
                                     .size(16.dp),
-                                tint = MaterialTheme.colorScheme.primary
+                                tint = MaterialTheme.colorScheme.tertiary
                             )
                         }
                     }
@@ -151,7 +157,8 @@ fun Response(from: Int, message: String, sentStat: Boolean){
                                 fontSize = 16.sp,
                                 textAlign = TextAlign.Justify,
                                 style = TextStyle(textDirection = TextDirection.Content),
-                                modifier = Modifier.padding(10.dp)
+                                modifier = Modifier.padding(10.dp),
+                                color = fontColor
                             )
                             AnimatedVisibility(visible = isBoxVisible) {
                                 Box(
@@ -165,7 +172,8 @@ fun Response(from: Int, message: String, sentStat: Boolean){
                                             .padding(end = 10.dp, bottom = 5.dp),
                                         text = formattedTime,
                                         fontSize = 10.sp,
-                                        style = TextStyle(textDirection = TextDirection.Content)
+                                        style = TextStyle(textDirection = TextDirection.Content),
+                                        color = fontColor
                                     )
                                 }
                             }

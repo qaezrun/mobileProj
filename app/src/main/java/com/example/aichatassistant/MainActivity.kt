@@ -12,6 +12,7 @@ import com.example.aichatassistant.components.LoginForm
 import com.example.aichatassistant.components.MessageModel
 import com.example.aichatassistant.components.ModalModel
 import com.example.aichatassistant.components.MyModal
+import com.example.aichatassistant.components.listOfModal
 import com.example.aichatassistant.components.rememberFirebaseAuthLauncher
 import com.example.aichatassistant.components.whatModalCanDo
 import com.example.aichatassistant.ui.theme.AiChatAssistantTheme
@@ -29,8 +30,12 @@ class MainActivity : ComponentActivity() {
                     fireViewModel.updateFirebaseUser(result)
                 },
                 onAuthError = {
+                    val a = listOfModal[2] // located at model
+                    modal.setModalValues(a.header,it.message.toString(),a.btnOneName,a.btnTwoName,a.twoBtn,a.whatModalCanDo)
+                    modal.toggleModal()
                     fireViewModel.updateFirebaseUser(null)
-                }
+                },
+                loading
             )
             AiChatAssistantTheme {
                 /*This condition checks if user is currently login or not*/

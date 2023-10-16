@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -38,7 +39,6 @@ fun AiChatAssistant(
 ) {
     val lazyColumnListState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
-    message.addMessage(Message("What can I help you today?", 0,true))
 
     Scaffold(
         topBar = {
@@ -53,6 +53,20 @@ fun AiChatAssistant(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.surface
         ) {
+            if(message.getMessageList.isEmpty()){
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                ){
+                    Column (
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                    ){
+                        Text(text = "Ask me anything!", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.secondary)
+                    }
+                }
+            }
             LazyColumn(
                 modifier = Modifier
                     .padding(padding)
@@ -79,7 +93,7 @@ fun MainBar(modal: ModalModel, fireViewModel: FirebaseModel){
         modifier = Modifier
             .fillMaxWidth()
             .height(50.dp)
-            .background(MaterialTheme.colorScheme.onTertiary)
+            .background(MaterialTheme.colorScheme.primary)
     ){
         Row(
             modifier = Modifier
@@ -92,12 +106,14 @@ fun MainBar(modal: ModalModel, fireViewModel: FirebaseModel){
             ){
                 Text(
                     text = "Chat Bot",
+                    style = MaterialTheme.typography.bodyLarge,
                     fontSize = 17.sp,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(start = 10.dp)
+                    modifier = Modifier
+                        .padding(start = 10.dp)
                         .clickable {
                             fireViewModel.updateFirebaseUser(null)// Logout User
-                        }
+                        },
+                    color = MaterialTheme.colorScheme.secondary
                 )
             }
             Box(
@@ -113,13 +129,17 @@ fun MainBar(modal: ModalModel, fireViewModel: FirebaseModel){
                     },
                     border = BorderStroke(
                         width = 1.dp,
-                        color =  Color(0xFFAAE9E6)
+                        color = MaterialTheme.colorScheme.tertiary
                     ),
                     modifier = Modifier
                         .align(Alignment.CenterEnd),
                     contentPadding = PaddingValues(start = 15.dp, top = 0.dp, bottom = 0.dp, end = 15.dp)
                 ) {
-                    Text(text = "Clear chat")
+                    Text(
+                        text = "Clear chat",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.tertiary
+                    )
                 }
             }
         }

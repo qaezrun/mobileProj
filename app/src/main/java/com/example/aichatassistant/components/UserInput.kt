@@ -82,14 +82,14 @@ fun ChatBox(messageModel: MessageModel){
                         modifier = Modifier
                             .border(
                                 width = 1.dp,
-                                color = Color(0xFFAAE9E6),
+                                color = MaterialTheme.colorScheme.surface,
                                 shape = RoundedCornerShape(size = 16.dp)
                             )
                             .padding(horizontal = 12.dp, vertical = 9.dp)
                     ) {
                         if (textMessage.isEmpty()) {
                             Text(
-                                text = "Message...",
+                                text = "Enter message...",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Normal,
                                 color = Color.LightGray
@@ -116,6 +116,7 @@ fun ChatBox(messageModel: MessageModel){
                             //testPublicApiPost()
                             messageModel.toggleSentStat(messageModel.getMessageList.size-1)
                             val result = postAiMessage(messageUsage)
+                            println(result);
                             messageModel.addMessage(Message(result,0,true))
                             isAiThinking = false
                             showSend = true
@@ -132,7 +133,7 @@ fun ChatBox(messageModel: MessageModel){
                         modifier = Modifier
                             .rotate(-45f)
                             .size(23.dp),
-                        tint = Color(0xFFAAE9E6)
+                        tint = MaterialTheme.colorScheme.tertiary
                     )
                 }
                 AnimatedVisibility(visible = isAiThinking) {
@@ -156,7 +157,7 @@ fun DotsTyping() {
             .size(dotSize)
             .offset(y = -offset.dp)
             .background(
-                color = MaterialTheme.colorScheme.primary,
+                color = MaterialTheme.colorScheme.tertiary,
                 shape = CircleShape
             )
     )

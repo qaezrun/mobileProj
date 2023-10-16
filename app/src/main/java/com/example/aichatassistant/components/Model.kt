@@ -38,6 +38,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.ViewModel
 import com.example.aichatassistant.FirebaseUtils
@@ -125,10 +126,10 @@ fun ProgressIndicatorLoading(
             .size(progressIndicatorSize)
             .rotate(angle)
             .border(
-                12.dp,
+                5.dp,
                 brush = Brush.sweepGradient(
                     listOf(
-                        Color.White, // add background color first
+                        MaterialTheme.colorScheme.tertiary, // add background color first
                         progressIndicatorColor.copy(alpha = 0.1f),
                         progressIndicatorColor
                     )
@@ -136,7 +137,7 @@ fun ProgressIndicatorLoading(
                 shape = CircleShape
             ),
         strokeWidth = 1.dp,
-        color = Color.White // Set background color
+        color = MaterialTheme.colorScheme.surface// Set background color
     )
 }
 
@@ -159,7 +160,7 @@ fun LoadingPop(){
                 ){
                     ProgressIndicatorLoading(
                         progressIndicatorSize = 60.dp,
-                        progressIndicatorColor = Color.Black
+                        progressIndicatorColor = MaterialTheme.colorScheme.secondary
                     )
                     // Gap between progress indicator and text
                     Spacer(modifier = Modifier.height(10.dp))
@@ -167,7 +168,8 @@ fun LoadingPop(){
                     // Please wait text
                     Text(
                         text = "Please wait...",
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.titleLarge,
+                        fontSize = 17.sp
                     )
                 }
             }
@@ -256,7 +258,7 @@ fun MyModal(
             elevation = CardDefaults.cardElevation(defaultElevation = 9.dp),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(
-                containerColor =  MaterialTheme.colorScheme.onTertiary
+                containerColor =  MaterialTheme.colorScheme.primary
             )
         ) {
             Column(
@@ -282,12 +284,14 @@ fun MyModal(
                             modifier = Modifier
                                 .padding(bottom = 5.dp)
                                 .align(Alignment.CenterHorizontally),
-                            color = Color.Blue
+                            color = MaterialTheme.colorScheme.secondary
                         )
                         Text(
                             text = message,
                             textAlign = TextAlign.Justify,
-                            style = MaterialTheme.typography.bodySmall
+                            style = MaterialTheme.typography.titleLarge,
+                            fontSize = 16.sp,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
@@ -301,13 +305,13 @@ fun MyModal(
                         TextButton(
                             onClick = {onConfirmation()},
                         ) {
-                            Text(btnOne)
+                            Text(text = btnOne,style = MaterialTheme.typography.titleLarge, fontSize = 16.sp,color = MaterialTheme.colorScheme.secondary)
                         }
                     }
                     TextButton(
                         onClick = {onDismissRequest()},
                     ) {
-                        Text(text = btnTwo)
+                        Text(text = btnTwo,style = MaterialTheme.typography.titleLarge, fontSize = 16.sp,color = MaterialTheme.colorScheme.secondary)
                     }
                 }
             }

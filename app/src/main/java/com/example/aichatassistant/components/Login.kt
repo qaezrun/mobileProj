@@ -1,9 +1,11 @@
 package com.example.aichatassistant.components
+
 import android.content.Intent
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,6 +33,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,6 +52,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.aichatassistant.FirebaseUtils
 import com.example.aichatassistant.R
@@ -56,11 +60,18 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import com.google.firebase.auth.AuthResult
+import com.google.firebase.auth.FirebaseAuthEmailException
+import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
+import com.google.firebase.auth.FirebaseAuthInvalidUserException
+import com.google.firebase.auth.FirebaseAuthRecentLoginRequiredException
+import com.google.firebase.auth.FirebaseAuthUserCollisionException
+import com.google.firebase.auth.FirebaseAuthWeakPasswordException
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import java.lang.Exception
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,7 +85,7 @@ fun LoginForm(
         launcher is used for google sign in. Line 223
         fireViewModel is used on email/password sign in. Line 175
 
-        if you see FirebaseUtils.firebaseauth, it's just firebaseauth instance
+        if you see FirebaseUtils.firebaseAuth, it's just firebaseAuth instance
         you can look at it on FirebaseUtils
     */
     val token = stringResource(R.string.web_client_id)
@@ -91,6 +102,7 @@ fun LoginForm(
                 showSignUp = false
             },
             onConfirmation = {
+                showSignUp = false
                 val a = listOfModal[3]
                 modal.setModalValues(a.header,a.message,a.btnOneName,a.btnTwoName,a.twoBtn,a.whatModalCanDo)
                 modal.toggleModal()
@@ -103,6 +115,7 @@ fun LoginForm(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .background(MaterialTheme.colorScheme.primary)
     ){
         Column(
             modifier = Modifier
@@ -122,13 +135,16 @@ fun LoginForm(
                         text = "Welcome Human!",
                         style = MaterialTheme.typography.bodyLarge,
                         modifier = Modifier
-                            .align(Alignment.CenterHorizontally)
+                            .align(Alignment.CenterHorizontally),
+                        color = MaterialTheme.colorScheme.secondary
                     )
                     Text(
                         text = "I've been waiting for you",
-                        style = MaterialTheme.typography.labelSmall,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontSize = 17.sp,
                         modifier = Modifier
-                            .align(Alignment.CenterHorizontally)
+                            .align(Alignment.CenterHorizontally),
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
@@ -141,20 +157,28 @@ fun LoginForm(
                     OutlinedTextField(
                         value = email,
                         onValueChange = {email = it},
-                        label = {Text(text="Email", style = MaterialTheme.typography.labelSmall)},
+                        label = {Text(text="Email", style = MaterialTheme.typography.labelSmall, color = Color.Black)},
+                        placeholder = {Text(text = "enter email...", style = MaterialTheme.typography.labelSmall)},
                         singleLine = true,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(start = 16.dp, end = 16.dp)
                             .height(60.dp),
-                        textStyle = MaterialTheme.typography.labelSmall
+                        textStyle = MaterialTheme.typography.labelSmall,
+                        colors = TextFieldDefaults.outlinedTextFieldColors(
+                            focusedBorderColor = MaterialTheme.colorScheme.onSurface
+                        )
                     )
                     OutlinedTextField(
                         value = password,
                         onValueChange = { password = it },
-                        label = {Text(text = "Password", style = MaterialTheme.typography.labelSmall)},
+                        label = {Text(text = "Password", style = MaterialTheme.typography.labelSmall, color = Color.Black)},
+                        placeholder = {Text(text = "enter password..", style = MaterialTheme.typography.labelSmall)},
                         singleLine = true,
                         textStyle = MaterialTheme.typography.labelSmall,
+                        colors = TextFieldDefaults.outlinedTextFieldColors(
+                            focusedBorderColor = MaterialTheme.colorScheme.onSurface
+                        ),
                         visualTransformation =  if (showPassword) {
                             VisualTransformation.None
                         } else {
@@ -168,7 +192,8 @@ fun LoginForm(
                                 IconButton(onClick = { showPassword = false }) {
                                     Icon(
                                         imageVector = Icons.Filled.Visibility,
-                                        contentDescription = "hide_password"
+                                        contentDescription = "hide_password",
+                                        tint = MaterialTheme.colorScheme.secondary
                                     )
                                 }
                             } else {
@@ -176,7 +201,8 @@ fun LoginForm(
                                     onClick = { showPassword = true }) {
                                     Icon(
                                         imageVector = Icons.Filled.VisibilityOff,
-                                        contentDescription = "hide_password"
+                                        contentDescription = "hide_password",
+                                        tint = MaterialTheme.colorScheme.secondary
                                     )
                                 }
                             }
@@ -186,6 +212,7 @@ fun LoginForm(
                             .padding(start = 16.dp, end = 16.dp)
                             .height(60.dp)
                     )
+                    Spacer(modifier = Modifier.height(20.dp))
                     Button(
                         onClick = {
                             if(notEmpty()){
@@ -196,9 +223,25 @@ fun LoginForm(
                                         if(task.isSuccessful){
                                             fireViewModel.updateFirebaseUser(task.result)
                                         }else{
-                                            val err = task.exception?.message
-                                            val a = listOfModal[0] // located at model
-                                            modal.setModalValues(a.header,err.toString(),a.btnOneName,a.btnTwoName,a.twoBtn,a.whatModalCanDo)
+                                            val a = listOfModal[0]
+                                            when (task.exception) {
+                                                is FirebaseAuthInvalidCredentialsException -> {
+                                                    // Prompt the user with a message like "Invalid email or password."
+                                                    modal.setModalValues("Invalid email or password","The email or password you entered is incorrect, take your time we are more than willing to wait!",a.btnOneName,a.btnTwoName,a.twoBtn,a.whatModalCanDo)
+                                                }
+                                                is FirebaseAuthRecentLoginRequiredException -> {
+                                                    // Prompt the user with a message like "You recently changed your password. Please sign in again using the new password."
+                                                    modal.setModalValues("Do you remember?","You recently change your password, try signing in with your new password.",a.btnOneName,a.btnTwoName,a.twoBtn,a.whatModalCanDo)
+                                                }
+                                                is FirebaseAuthInvalidUserException -> {
+                                                    // Prompt the user with a message like "The user has been disabled."
+                                                    modal.setModalValues("This account is disabled","You might have tried signing in multiple times with wrong login credentials, you may try again later.",a.btnOneName,a.btnTwoName,a.twoBtn,a.whatModalCanDo)
+                                                }
+                                                else -> {
+                                                    // Prompt the user with a generic error message.
+                                                    modal.setModalValues("Login failed","Please make sure this account your trying to login is existing or the inputted credentials are correct.",a.btnOneName,a.btnTwoName,a.twoBtn,a.whatModalCanDo)
+                                                }
+                                            }
                                             modal.toggleModal()
                                         }
                                     }
@@ -209,13 +252,11 @@ fun LoginForm(
                             }
                         },
                         modifier = Modifier
-                            .align(Alignment.CenterHorizontally)
-                            .padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 10.dp)
-                            .fillMaxWidth(),
-                        shape = RoundedCornerShape(6.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.Black, contentColor = Color.White)
+                            .align(Alignment.CenterHorizontally),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary, contentColor = MaterialTheme.colorScheme.primary)
                     ) {
-                        Text(text = "Login", style = MaterialTheme.typography.labelSmall,modifier = Modifier.padding(6.dp))
+                        Text(text = "Login", style = MaterialTheme.typography.titleLarge, fontSize = 16.sp)
                     }
                 }
             }
@@ -234,19 +275,24 @@ fun LoginForm(
                     ){
                         Text(
                             text = "Don't have an account yet? ",
-                            style = MaterialTheme.typography.bodySmall
+                            style = MaterialTheme.typography.titleLarge,
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = "SIGN UP",
-                            color = Color.Blue,
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.secondary,
+                            fontSize = 13.sp,
                             textDecoration = TextDecoration.Underline,
                             modifier = Modifier
                                 .clickable { showSignUp = true }
                         )
                         Text(
                             text = " or sign up using:" ,
-                            style = MaterialTheme.typography.bodySmall
+                            style = MaterialTheme.typography.titleLarge,
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                     IconButton(
@@ -262,7 +308,7 @@ fun LoginForm(
                         modifier = Modifier
                             .align(Alignment.CenterHorizontally)
                     ) {
-                        Icon(painter = painterResource(R.drawable.ic_google_logo), contentDescription = "")
+                        Icon(painter = painterResource(R.drawable.ic_google_logo), contentDescription = "",tint = MaterialTheme.colorScheme.secondary)
                     }
                 }
             }
@@ -270,11 +316,12 @@ fun LoginForm(
     }
 }
 
-
+class MyCustomException(message: String) : Exception(message)
 @Composable
 fun rememberFirebaseAuthLauncher(
     onAuthComplete: (AuthResult) -> Unit,
-    onAuthError: (ApiException) -> Unit
+    onAuthError: (ApiException) -> Unit,
+    loading: LoadingSpinner
 ): ManagedActivityResultLauncher<Intent, ActivityResult> {
     val scope = rememberCoroutineScope()
     return rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -283,10 +330,23 @@ fun rememberFirebaseAuthLauncher(
             val account = task.getResult(ApiException::class.java)!!
             val credential = GoogleAuthProvider.getCredential(account.idToken!!, null)
             scope.launch {
+                loading.toggleLoading()
                 val authResult = Firebase.auth.signInWithCredential(credential).await()
-                onAuthComplete(authResult)
+                val user = hashMapOf(
+                    "email" to authResult.user?.email,
+                    "id" to authResult.user?.uid
+                )
+                FirebaseUtils.firebaseFireStore.collection("user").document(authResult.user?.uid.toString()).set(user)
+                    .addOnSuccessListener {
+                        loading.toggleLoading()
+                        onAuthComplete(authResult)
+                    }.addOnFailureListener {
+                        loading.toggleLoading()
+                        throw MyCustomException("Something went wrong")
+                    }
             }
         } catch (e: ApiException) {
+            loading.toggleLoading()
             onAuthError(e)
         }
     }
@@ -300,7 +360,6 @@ fun SignUpFormPopUp(
     modal: ModalModel,
     loading: LoadingSpinner
 ){
-    val context = LocalContext.current
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var password2 by rememberSaveable { mutableStateOf("") }
@@ -324,7 +383,7 @@ fun SignUpFormPopUp(
         Card(
             elevation = CardDefaults.cardElevation(defaultElevation = 9.dp),
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor =  MaterialTheme.colorScheme.onTertiary)
+            colors = CardDefaults.cardColors(containerColor =  MaterialTheme.colorScheme.primary)
         ){
             Column(
                 modifier = Modifier
@@ -343,34 +402,42 @@ fun SignUpFormPopUp(
                         Icon(Icons.Filled.Close, contentDescription = "Close",
                             modifier = Modifier
                                 .padding(0.dp)
-                                .size(17.dp)
+                                .size(23.dp),
+                            tint = MaterialTheme.colorScheme.secondary
                         )
                     }
                 }
                 Text(
                     text = "Create Account",
                     style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.secondary
                 )
                 Text(
                     text = "We only ask for your email and a strong password.",
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(15.dp))
                 OutlinedTextField(
                     value = email,
                     onValueChange = {email = it},
-                    label = {Text(text="Email", style = MaterialTheme.typography.labelSmall)},
+                    label = {Text(text="Email", style = MaterialTheme.typography.labelSmall, color = Color.Black)},
+                    placeholder = {Text(text = "enter email..", style = MaterialTheme.typography.labelSmall)},
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(start = 16.dp, end = 16.dp)
                         .height(60.dp),
                     singleLine = true,
                     textStyle = MaterialTheme.typography.labelSmall,
+                    colors = TextFieldDefaults.outlinedTextFieldColors(
+                        focusedBorderColor = MaterialTheme.colorScheme.onSurface
+                    )
                 )
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = {Text(text = "Password", style = MaterialTheme.typography.labelSmall)},
+                    label = {Text(text = "Password", style = MaterialTheme.typography.labelSmall, color = Color.Black)},
+                    placeholder = {Text(text = "enter password..", style = MaterialTheme.typography.labelSmall)},
                     singleLine = true,
                     textStyle = MaterialTheme.typography.labelSmall,
                     visualTransformation =  if (showPassword) {
@@ -386,7 +453,8 @@ fun SignUpFormPopUp(
                             IconButton(onClick = { showPassword = false }) {
                                 Icon(
                                     imageVector = Icons.Filled.Visibility,
-                                    contentDescription = "hide_password"
+                                    contentDescription = "hide_password",
+                                    tint = MaterialTheme.colorScheme.secondary
                                 )
                             }
                         } else {
@@ -394,7 +462,8 @@ fun SignUpFormPopUp(
                                 onClick = { showPassword = true }) {
                                 Icon(
                                     imageVector = Icons.Filled.VisibilityOff,
-                                    contentDescription = "hide_password"
+                                    contentDescription = "hide_password",
+                                    tint = MaterialTheme.colorScheme.secondary
                                 )
                             }
                         }
@@ -402,12 +471,16 @@ fun SignUpFormPopUp(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(start = 16.dp, end = 16.dp)
-                        .height(60.dp)
+                        .height(60.dp),
+                    colors = TextFieldDefaults.outlinedTextFieldColors(
+                        focusedBorderColor = MaterialTheme.colorScheme.onSurface
+                    )
                 )
                 OutlinedTextField(
                     value = password2,
                     onValueChange = { password2 = it },
-                    label = {Text(text = "Confirm Password", style = MaterialTheme.typography.labelSmall)},
+                    label = {Text(text = "Confirm Password", style = MaterialTheme.typography.labelSmall, color = Color.Black)},
+                    placeholder = {Text(text = "enter password..", style = MaterialTheme.typography.labelSmall)},
                     singleLine = true,
                     textStyle = MaterialTheme.typography.labelSmall,
                     visualTransformation =  if (showPassword2) {
@@ -423,7 +496,8 @@ fun SignUpFormPopUp(
                             IconButton(onClick = { showPassword2 = false }) {
                                 Icon(
                                     imageVector = Icons.Filled.Visibility,
-                                    contentDescription = "hide_password"
+                                    contentDescription = "hide_password",
+                                    tint = MaterialTheme.colorScheme.secondary
                                 )
                             }
                         } else {
@@ -431,7 +505,8 @@ fun SignUpFormPopUp(
                                 onClick = { showPassword2 = true }) {
                                 Icon(
                                     imageVector = Icons.Filled.VisibilityOff,
-                                    contentDescription = "hide_password"
+                                    contentDescription = "hide_password",
+                                    tint = MaterialTheme.colorScheme.secondary
                                 )
                             }
                         }
@@ -439,7 +514,10 @@ fun SignUpFormPopUp(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(start = 16.dp, end = 16.dp)
-                        .height(60.dp)
+                        .height(60.dp),
+                    colors = TextFieldDefaults.outlinedTextFieldColors(
+                        focusedBorderColor = MaterialTheme.colorScheme.onSurface
+                    )
                 )
                 Spacer(modifier = Modifier.height(15.dp))
                 Button(
@@ -450,11 +528,38 @@ fun SignUpFormPopUp(
                                  .addOnCompleteListener{ task ->
                                      loading.toggleLoading()
                                      if(task.isSuccessful){
-                                         onConfirmation()
+                                         val user = hashMapOf(
+                                             "email" to task.result.user?.email,
+                                             "id" to task.result.user?.uid
+                                         )
+                                         FirebaseUtils.firebaseFireStore.collection("user").document(task.result.user?.uid.toString()).set(user)
+                                             .addOnSuccessListener {
+                                                 onConfirmation()
+                                             }.addOnFailureListener {
+                                                 val a = listOfModal[2] // located at model
+                                                 modal.setModalValues(a.header,it.message.toString(),a.btnOneName,a.btnTwoName,a.twoBtn,a.whatModalCanDo)
+                                                 modal.toggleModal()
+                                             }
                                      }else{
-                                         val err = task.exception?.message
                                          val a = listOfModal[2] // located at model
-                                         modal.setModalValues(a.header,err.toString(),a.btnOneName,a.btnTwoName,a.twoBtn,a.whatModalCanDo)
+                                         when (task.exception) {
+                                             is FirebaseAuthUserCollisionException -> {
+                                                 // Prompt the user with a message like "An account already exists with this email address."
+                                                 modal.setModalValues("Email already exist!","An account already exists with this email address, use other email address.",a.btnOneName,a.btnTwoName,a.twoBtn,a.whatModalCanDo)
+                                             }
+                                             is FirebaseAuthWeakPasswordException -> {
+                                                 // Prompt the user with a message like "Your password is too weak. Please choose a stronger password."
+                                                 modal.setModalValues("Weak password!","Your password is too weak, Please choose a stronger password.",a.btnOneName,a.btnTwoName,a.twoBtn,a.whatModalCanDo)
+                                             }
+                                             is FirebaseAuthEmailException -> {
+                                                 // Prompt the user with a message like "The email address is invalid."
+                                                 modal.setModalValues("Invalid email address!","Make sure your email address is valid, please double check.",a.btnOneName,a.btnTwoName,a.twoBtn,a.whatModalCanDo)
+                                             }
+                                             else -> {
+                                                 // Prompt the user with a generic error message.
+                                                 modal.setModalValues("Unable to create account","Please make sure to fill up all the required fields.",a.btnOneName,a.btnTwoName,a.twoBtn,a.whatModalCanDo)
+                                             }
+                                         }
                                          modal.toggleModal()
                                      }
                                  }
@@ -465,14 +570,13 @@ fun SignUpFormPopUp(
                          }
                     },
                     modifier = Modifier
-                        .align(Alignment.CenterHorizontally)
-                        .padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 10.dp)
-                        .fillMaxWidth(),
-                    shape = RoundedCornerShape(6.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Black, contentColor = Color.White)
+                        .align(Alignment.CenterHorizontally),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary, contentColor = MaterialTheme.colorScheme.primary)
                 ) {
-                    Text(text = "Create Account", style = MaterialTheme.typography.labelSmall,modifier = Modifier.padding(6.dp))
+                    Text(text = "Create Account", style = MaterialTheme.typography.titleLarge, fontSize = 16.sp)
                 }
+                Spacer(modifier = Modifier.height(15.dp))
             }
         }
     }
